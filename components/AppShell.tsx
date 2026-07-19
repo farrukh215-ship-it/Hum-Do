@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import BottomNav from "./BottomNav";
-import AddTransactionSheet from "./AddTransactionSheet";
+import TransactionSheet from "./TransactionSheet";
 import RealtimeRefresher from "./RealtimeRefresher";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -13,7 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <RealtimeRefresher />
       <div className="flex-1 pb-24">{children}</div>
       <BottomNav onAddClick={() => setAddOpen(true)} />
-      <AddTransactionSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <TransactionSheet open={addOpen} onClose={() => setAddOpen(false)} />
     </>
   );
 }

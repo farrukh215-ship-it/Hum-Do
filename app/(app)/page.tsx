@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMonthStartISO } from "@/lib/month";
 import { formatRs } from "@/lib/format";
-import { getCategoryMeta } from "@/lib/categories";
 import PersonCard from "@/components/PersonCard";
+import TransactionList, { type PersonMeta } from "@/components/TransactionList";
 import type { Role } from "@/lib/supabase/database.types";
 
 export default async function HomePage() {
@@ -51,6 +51,11 @@ export default async function HomePage() {
   const otherRole: Role = other?.role ?? (selfRole === "husband" ? "wife" : "husband");
   const otherLabel = other ? (otherRole === "husband" ? "Husband" : "Biwi") : "Abhi shamil nahi";
 
+  const profileByIdRecord: Record<string, PersonMeta> = {};
+  for (const p of profiles ?? []) {
+    profileByIdRecord[p.id] = { name: p.name, role: p.role };
+  }
+
   return (
     <div className="flex flex-col gap-5 pt-6">
       <div className="rounded-3xl bg-husband p-5 text-white">
@@ -73,37 +78,11 @@ export default async function HomePage() {
         />
       </div>
 
-      <div className="rounded-3xl bg-white p-2">
-        {(recentTx ?? []).length === 0 && (
-          <p className="p-4 text-center text-sm text-stone-400">Abhi tak koi entry nahi</p>
-        )}
-        {(recentTx ?? []).map((tx) => {
-          const meta = getCategoryMeta(tx.category);
-          const person = profileById.get(tx.user_id);
-          const personColor = person?.role === "husband" ? "text-husband" : "text-wife";
-          const isIncome = tx.type === "income";
-
-          return (
-            <div
-              key={tx.id}
-              className="flex items-center gap-3 border-b border-stone-100 px-3 py-3 last:border-0"
-            >
-              <span className="text-2xl">{meta.emoji}</span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-stone-800">{meta.label}</p>
-                <p className="text-xs text-stone-400">
-                  <span className={personColor}>{person?.name ?? "—"}</span>
-                  {tx.note ? ` · ${tx.note}` : ""}
-                </p>
-              </div>
-              <p className={`text-sm font-bold ${isIncome ? "text-husband" : "text-red-600"}`}>
-                {isIncome ? "+" : "−"}
-                {formatRs(tx.amount)}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+      <TransactionList
+        transactions={recentTx ?? []}
+        profileById={profileByIdRecord}
+        currentUserId={user?.id}
+      />
     </div>
   );
 }

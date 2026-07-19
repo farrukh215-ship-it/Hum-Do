@@ -1,17 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
 import type { TransactionType } from "@/lib/supabase/database.types";
 
-export default function AddTransactionSheet({
+export type EditableTransaction = {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  category: string;
+  note: string | null;
+};
+
+export default function TransactionSheet({
   open,
   onClose,
+  editing,
 }: {
   open: boolean;
   onClose: () => void;
+  editing?: EditableTransaction | null;
 }) {
   const router = useRouter();
   const [type, setType] = useState<TransactionType>("expense");
@@ -21,6 +31,23 @@ export default function AddTransactionSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+
+    if (editing) {
+      setType(editing.type);
+      setAmount(String(editing.amount));
+      setCategory(editing.category);
+      setNote(editing.note ?? "");
+    } else {
+      setType("expense");
+      setAmount("");
+      setCategory(null);
+      setNote("");
+    }
+    setError(null);
+  }, [open, editing]);
+
   const categories = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   function selectType(next: TransactionType) {
@@ -29,10 +56,6 @@ export default function AddTransactionSheet({
   }
 
   function handleClose() {
-    setAmount("");
-    setCategory(null);
-    setNote("");
-    setType("expense");
     setError(null);
     onClose();
   }
@@ -52,28 +75,61 @@ export default function AddTransactionSheet({
     setError(null);
 
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (editing) {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({ type, amount: amountNumber, category, note: note.trim() || null })
+        .eq("id", editing.id);
+
       setSaving(false);
-      setError("Dobara login karein");
-      return;
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+    } else {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setSaving(false);
+        setError("Dobara login karein");
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type,
+        amount: amountNumber,
+        category,
+        note: note.trim() || null,
+      });
+
+      setSaving(false);
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
     }
 
-    const { error: insertError } = await supabase.from("transactions").insert({
-      user_id: user.id,
-      type,
-      amount: amountNumber,
-      category,
-      note: note.trim() || null,
-    });
+    handleClose();
+    router.refresh();
+  }
+
+  async function handleDelete() {
+    if (!editing) return;
+
+    setSaving(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error: deleteError } = await supabase.from("transactions").delete().eq("id", editing.id);
 
     setSaving(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (deleteError) {
+      setError(deleteError.message);
       return;
     }
 
@@ -148,20 +204,31 @@ export default function AddTransactionSheet({
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
         <div className="mt-4 flex gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="flex-1 rounded-3xl bg-stone-100 px-4 py-3 text-sm font-semibold text-stone-500"
-          >
-            Cancel
-          </button>
+          {editing ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={saving}
+              className="flex-1 rounded-3xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition active:scale-95 disabled:opacity-50"
+            >
+              Delete karo
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleClose}
+              className="flex-1 rounded-3xl bg-stone-100 px-4 py-3 text-sm font-semibold text-stone-500"
+            >
+              Cancel
+            </button>
+          )}
           <button
             type="button"
             onClick={handleSave}
             disabled={saving}
             className="flex-1 rounded-3xl bg-stone-800 px-4 py-3 text-sm font-semibold text-white transition active:scale-95 disabled:opacity-50"
           >
-            {saving ? "Save ho raha hai..." : "Save karo ✓"}
+            {saving ? "Save ho raha hai..." : editing ? "Update karo ✓" : "Save karo ✓"}
           </button>
         </div>
       </div>
