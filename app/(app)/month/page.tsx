@@ -4,6 +4,7 @@ import { getMonthRange } from "@/lib/month";
 import { formatMonthLabel } from "@/lib/date";
 import { getCategoryMeta } from "@/lib/categories";
 import BarRow from "@/components/BarRow";
+import BudgetsSection from "@/components/BudgetsSection";
 
 export default async function MonthPage({
   searchParams,
@@ -14,17 +15,22 @@ export default async function MonthPage({
   const range = getMonthRange(month);
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const [{ data: profiles }, { data: monthTx }] = await Promise.all([
-    supabase.from("profiles").select("id, role"),
+  const [{ data: profiles }, { data: monthTx }, { data: budgetsData }] = await Promise.all([
+    supabase.from("profiles").select("id, role, household_id"),
     supabase
       .from("transactions")
       .select("user_id, type, amount, category")
       .gte("created_at", range.startISO)
       .lt("created_at", range.endISO),
+    supabase.from("budgets").select("category, monthly_limit"),
   ]);
 
   const roleByUser = new Map((profiles ?? []).map((p) => [p.id, p.role]));
+  const selfHouseholdId = profiles?.find((p) => p.id === user?.id)?.household_id ?? null;
 
   let husbandIncome = 0;
   let wifeIncome = 0;
@@ -48,6 +54,7 @@ export default async function MonthPage({
   const maxCategory = sortedCategories[0]?.[1] ?? 0;
   const maxIncome = Math.max(husbandIncome, wifeIncome, 1);
   const maxExpense = Math.max(husbandExpense, wifeExpense, 1);
+  const expenseTotalsRecord = Object.fromEntries(categoryTotals);
 
   return (
     <div className="flex flex-col gap-5 pt-6">
@@ -110,6 +117,14 @@ export default async function MonthPage({
           })}
         </div>
       </section>
+
+      {selfHouseholdId && (
+        <BudgetsSection
+          householdId={selfHouseholdId}
+          expenseTotals={expenseTotalsRecord}
+          budgets={budgetsData ?? []}
+        />
+      )}
     </div>
   );
 }

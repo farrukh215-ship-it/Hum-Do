@@ -81,12 +81,20 @@ export default function TransactionSheet({
 
     const supabase = createClient();
 
-    const createdAt = dateInputToISO(date);
-
     if (editing) {
+      // Only override created_at if the date was actually changed — otherwise
+      // keep the original real time-of-day instead of snapping it to noon.
+      const dateChanged = date !== dateInputValue(editing.created_at);
+
       const { error: updateError } = await supabase
         .from("transactions")
-        .update({ type, amount: amountNumber, category, note: note.trim() || null, created_at: createdAt })
+        .update({
+          type,
+          amount: amountNumber,
+          category,
+          note: note.trim() || null,
+          ...(dateChanged ? { created_at: dateInputToISO(date) } : {}),
+        })
         .eq("id", editing.id);
 
       setSaving(false);
@@ -105,13 +113,17 @@ export default function TransactionSheet({
         return;
       }
 
+      // Only set created_at if the date was moved off today — a fresh entry
+      // left on today's date keeps its real current time-of-day (DB default).
+      const dateChanged = date !== dateInputValue(new Date().toISOString());
+
       const { error: insertError } = await supabase.from("transactions").insert({
         user_id: user.id,
         type,
         amount: amountNumber,
         category,
         note: note.trim() || null,
-        created_at: createdAt,
+        ...(dateChanged ? { created_at: dateInputToISO(date) } : {}),
       });
 
       setSaving(false);

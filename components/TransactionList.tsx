@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { getCategoryMeta } from "@/lib/categories";
 import { formatRs } from "@/lib/format";
-import { formatDateLabel } from "@/lib/date";
+import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 import TransactionSheet from "./TransactionSheet";
 import type { Role, TransactionType } from "@/lib/supabase/database.types";
 
@@ -87,10 +87,13 @@ export default function TransactionList({
                         {tx.note ? ` · ${tx.note}` : ""}
                       </p>
                     </div>
-                    <p className={`text-sm font-bold ${isIncome ? "text-husband" : "text-red-600"}`}>
-                      {isIncome ? "+" : "−"}
-                      {formatRs(tx.amount)}
-                    </p>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${isIncome ? "text-husband" : "text-red-600"}`}>
+                        {isIncome ? "+" : "−"}
+                        {formatRs(tx.amount)}
+                      </p>
+                      <p className="text-[10px] text-stone-300">{formatTimeLabel(tx.created_at)}</p>
+                    </div>
                   </button>
                 );
               })}

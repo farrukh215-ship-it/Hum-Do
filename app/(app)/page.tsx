@@ -15,7 +15,7 @@ export default async function HomePage() {
   const monthStart = getMonthStartISO();
 
   const [{ data: profiles }, { data: monthTx }, { data: recentTx }] = await Promise.all([
-    supabase.from("profiles").select("id, name, role"),
+    supabase.from("profiles").select("id, name, role, household_id"),
     supabase.from("transactions").select("user_id, type, amount").gte("created_at", monthStart),
     supabase
       .from("transactions")
@@ -27,6 +27,16 @@ export default async function HomePage() {
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
   const self = user ? profileById.get(user.id) : undefined;
   const other = (profiles ?? []).find((p) => p.id !== user?.id);
+
+  let inviteCode: string | null = null;
+  if (!other && self?.household_id) {
+    const { data: household } = await supabase
+      .from("households")
+      .select("invite_code")
+      .eq("id", self.household_id)
+      .maybeSingle();
+    inviteCode = household?.invite_code ?? null;
+  }
 
   let totalIncome = 0;
   let totalExpense = 0;
@@ -69,15 +79,29 @@ export default async function HomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <PersonCard label="Aap" role={selfRole} income={selfIncome} expense={selfExpense} />
+        <PersonCard
+          label="Aap"
+          role={selfRole}
+          income={selfIncome}
+          expense={selfExpense}
+          href={user ? `/person/${user.id}` : undefined}
+        />
         <PersonCard
           label={otherLabel}
           role={otherRole}
           income={otherIncome}
           expense={otherExpense}
           muted={!other}
+          href={other ? `/person/${other.id}` : undefined}
         />
       </div>
+
+      {!other && inviteCode && (
+        <div className="rounded-3xl bg-stone-100 p-4 text-center text-sm text-stone-600">
+          Partner abhi shamil nahi hue. Ghar ka code bhejein:{" "}
+          <span className="font-bold tracking-widest text-stone-800">{inviteCode}</span>
+        </div>
+      )}
 
       <TransactionList
         transactions={recentTx ?? []}

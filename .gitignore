@@ -44,3 +44,6 @@ next-env.d.ts
 # office temp/lock files and reference docs (not part of the codebase)
 ~$*
 *.docx
+
+# local Claude Code tooling metadata
+.claude/

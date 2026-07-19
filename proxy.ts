@@ -44,11 +44,11 @@ export async function proxy(request: NextRequest) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, household_id")
     .eq("id", user.id)
     .maybeSingle();
 
-  const hasProfile = !!profile?.role;
+  const hasProfile = !!profile?.role && !!profile?.household_id;
   const isOnboardingPath = pathname === "/onboarding";
 
   if (!hasProfile && !isOnboardingPath) {

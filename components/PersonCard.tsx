@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatRs } from "@/lib/format";
 import type { Role } from "@/lib/supabase/database.types";
 
@@ -7,19 +8,24 @@ export default function PersonCard({
   income,
   expense,
   muted,
+  href,
 }: {
   label: string;
   role: Role;
   income: number;
   expense: number;
   muted?: boolean;
+  href?: string;
 }) {
   const bg = role === "husband" ? "bg-husband/10" : "bg-wife/10";
   const text = role === "husband" ? "text-husband" : "text-wife";
   const emoji = role === "husband" ? "👨" : "👩";
+  const classes = `block rounded-3xl p-4 transition ${muted ? "bg-stone-100" : bg} ${
+    href ? "active:scale-95" : ""
+  }`;
 
-  return (
-    <div className={`rounded-3xl p-4 ${muted ? "bg-stone-100" : bg}`}>
+  const content = (
+    <>
       <div className="flex items-center gap-2">
         <span className="text-2xl">{emoji}</span>
         <span className={`text-sm font-bold ${muted ? "text-stone-400" : text}`}>{label}</span>
@@ -32,6 +38,16 @@ export default function PersonCard({
           Kharch kiya: <span className="font-semibold text-stone-700">{formatRs(expense)}</span>
         </p>
       </div>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={classes}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={classes}>{content}</div>;
 }

@@ -34,3 +34,7 @@ export function formatDateLabel(iso: string): string {
 export function formatMonthLabel(monthStartISO: string): string {
   return new Date(monthStartISO).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
+
+export function formatTimeLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}

@@ -19,6 +19,13 @@ export default function RealtimeRefresher() {
           router.refresh();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "budgets" },
+        () => {
+          router.refresh();
+        },
+      )
       .subscribe();
 
     return () => {
