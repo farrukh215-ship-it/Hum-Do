@@ -36,6 +36,9 @@ create policy "delete own tx" on transactions for delete to authenticated using 
 drop policy if exists "read profiles" on profiles;
 create policy "read profiles" on profiles for select to authenticated using (true);
 
+drop policy if exists "insert own profile" on profiles;
+create policy "insert own profile" on profiles for insert to authenticated with check (auth.uid() = id);
+
 drop policy if exists "update own profile" on profiles;
 create policy "update own profile" on profiles for update to authenticated using (auth.uid() = id);
 
