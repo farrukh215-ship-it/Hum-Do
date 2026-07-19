@@ -1,15 +1,27 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getMonthStartISO } from "@/lib/month";
+import { getMonthRange } from "@/lib/month";
+import { formatMonthLabel } from "@/lib/date";
 import { getCategoryMeta } from "@/lib/categories";
 import BarRow from "@/components/BarRow";
 
-export default async function MonthPage() {
+export default async function MonthPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month } = await searchParams;
+  const range = getMonthRange(month);
+
   const supabase = await createClient();
-  const monthStart = getMonthStartISO();
 
   const [{ data: profiles }, { data: monthTx }] = await Promise.all([
     supabase.from("profiles").select("id, role"),
-    supabase.from("transactions").select("user_id, type, amount, category").gte("created_at", monthStart),
+    supabase
+      .from("transactions")
+      .select("user_id, type, amount, category")
+      .gte("created_at", range.startISO)
+      .lt("created_at", range.endISO),
   ]);
 
   const roleByUser = new Map((profiles ?? []).map((p) => [p.id, p.role]));
@@ -39,7 +51,27 @@ export default async function MonthPage() {
 
   return (
     <div className="flex flex-col gap-5 pt-6">
-      <h1 className="text-xl font-extrabold text-stone-800">Is mahine ka hisaab</h1>
+      <div className="flex items-center justify-between">
+        <Link
+          href={`/month?month=${range.prevParam}`}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-stone-500"
+          aria-label="Pichla mahina"
+        >
+          ←
+        </Link>
+        <h1 className="text-lg font-extrabold text-stone-800">{formatMonthLabel(range.startISO)}</h1>
+        {range.isCurrentMonth ? (
+          <div className="h-9 w-9" />
+        ) : (
+          <Link
+            href={`/month?month=${range.nextParam}`}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-stone-500"
+            aria-label="Agla mahina"
+          >
+            →
+          </Link>
+        )}
+      </div>
 
       <section className="rounded-3xl bg-white p-4">
         <h2 className="text-sm font-semibold text-stone-500">Kamai</h2>

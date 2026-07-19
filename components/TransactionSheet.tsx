@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
+import { dateInputToISO, dateInputValue } from "@/lib/date";
 import type { TransactionType } from "@/lib/supabase/database.types";
 
 export type EditableTransaction = {
@@ -12,6 +13,7 @@ export type EditableTransaction = {
   amount: number;
   category: string;
   note: string | null;
+  created_at: string;
 };
 
 export default function TransactionSheet({
@@ -28,6 +30,7 @@ export default function TransactionSheet({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [date, setDate] = useState(() => dateInputValue(new Date().toISOString()));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,11 +42,13 @@ export default function TransactionSheet({
       setAmount(String(editing.amount));
       setCategory(editing.category);
       setNote(editing.note ?? "");
+      setDate(dateInputValue(editing.created_at));
     } else {
       setType("expense");
       setAmount("");
       setCategory(null);
       setNote("");
+      setDate(dateInputValue(new Date().toISOString()));
     }
     setError(null);
   }, [open, editing]);
@@ -76,10 +81,12 @@ export default function TransactionSheet({
 
     const supabase = createClient();
 
+    const createdAt = dateInputToISO(date);
+
     if (editing) {
       const { error: updateError } = await supabase
         .from("transactions")
-        .update({ type, amount: amountNumber, category, note: note.trim() || null })
+        .update({ type, amount: amountNumber, category, note: note.trim() || null, created_at: createdAt })
         .eq("id", editing.id);
 
       setSaving(false);
@@ -104,6 +111,7 @@ export default function TransactionSheet({
         amount: amountNumber,
         category,
         note: note.trim() || null,
+        created_at: createdAt,
       });
 
       setSaving(false);
@@ -177,6 +185,14 @@ export default function TransactionSheet({
             className="ml-2 w-full bg-transparent text-2xl font-extrabold text-stone-800 outline-none"
           />
         </div>
+
+        <input
+          type="date"
+          value={date}
+          max={dateInputValue(new Date().toISOString())}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-4 w-full rounded-3xl border border-stone-200 bg-white px-4 py-3 text-center text-sm text-stone-800 outline-none focus:border-stone-400"
+        />
 
         <div className="mt-4 flex flex-wrap gap-2">
           {categories.map((c) => (

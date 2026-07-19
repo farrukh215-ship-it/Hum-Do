@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getMonthStartISO } from "@/lib/month";
 import { formatRs } from "@/lib/format";
@@ -83,6 +84,13 @@ export default async function HomePage() {
         profileById={profileByIdRecord}
         currentUserId={user?.id}
       />
+
+      <Link
+        href="/history"
+        className="rounded-3xl bg-white py-3 text-center text-sm font-semibold text-stone-500"
+      >
+        Poori history dekhein →
+      </Link>
     </div>
   );
 }
