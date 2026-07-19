@@ -19,6 +19,10 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
+export function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function formatDateLabel(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
@@ -28,7 +32,7 @@ export function formatDateLabel(iso: string): string {
   if (isSameDay(d, today)) return "Aaj";
   if (isSameDay(d, yesterday)) return "Kal";
 
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return formatShortDate(iso);
 }
 
 export function formatMonthLabel(monthStartISO: string): string {

@@ -40,3 +40,23 @@ export function getMonthRange(monthParam?: string): MonthRange {
     isCurrentMonth: start.getTime() === current.getTime(),
   };
 }
+
+export type CustomRange = { startISO: string; endISO: string };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** from/to are "YYYY-MM-DD" date-input values. Returns null if either is missing/invalid. */
+export function getCustomDateRange(from?: string, to?: string): CustomRange | null {
+  if (!from || !to || !DATE_RE.test(from) || !DATE_RE.test(to)) return null;
+
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+
+  const a = new Date(fy, fm - 1, fd);
+  const b = new Date(ty, tm - 1, td);
+
+  const [start, end] = a.getTime() <= b.getTime() ? [a, b] : [b, a];
+  const endExclusive = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+
+  return { startISO: start.toISOString(), endISO: endExclusive.toISOString() };
+}
