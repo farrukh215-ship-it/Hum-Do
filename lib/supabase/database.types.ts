@@ -1,5 +1,6 @@
 export type Role = "husband" | "wife";
 export type TransactionType = "income" | "expense";
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export interface Database {
   public: {
@@ -134,6 +135,63 @@ export interface Database {
           note?: string | null;
           day_of_month?: number;
           last_applied_month?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      monthly_reports: {
+        Row: {
+          id: string;
+          household_id: string;
+          month: string;
+          report_json: Json;
+          ai_summary: string | null;
+          generated_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id: string;
+          month: string;
+          report_json: Json;
+          ai_summary?: string | null;
+          generated_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          month?: string;
+          report_json?: Json;
+          ai_summary?: string | null;
+          generated_at?: string;
+        };
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          household_id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          user_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
           created_at?: string;
         };
         Relationships: [];

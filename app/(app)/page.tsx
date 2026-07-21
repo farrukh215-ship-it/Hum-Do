@@ -7,6 +7,9 @@ import PersonCard from "@/components/PersonCard";
 import TransactionList, { type PersonMeta } from "@/components/TransactionList";
 import RecurringList from "@/components/RecurringList";
 import WeeklyShareCard from "@/components/WeeklyShareCard";
+import ReportBanner from "@/components/ReportBanner";
+import PushOptIn from "@/components/PushOptIn";
+import { formatMonthLabel } from "@/lib/date";
 import type { Role } from "@/lib/supabase/database.types";
 
 export default async function HomePage() {
@@ -41,6 +44,23 @@ export default async function HomePage() {
       .eq("id", self.household_id)
       .maybeSingle();
     inviteCode = household?.invite_code ?? null;
+  }
+
+  let recentReport: { month: string; monthLabel: string } | null = null;
+  if (self?.household_id) {
+    const tenDaysAgo = new Date();
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+    const { data: reportRow } = await supabase
+      .from("monthly_reports")
+      .select("month, generated_at")
+      .eq("household_id", self.household_id)
+      .gte("generated_at", tenDaysAgo.toISOString())
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (reportRow) {
+      recentReport = { month: reportRow.month.slice(0, 7), monthLabel: formatMonthLabel(reportRow.month) };
+    }
   }
 
   let totalIncome = 0;
@@ -112,6 +132,10 @@ export default async function HomePage() {
         </div>
       )}
 
+      {recentReport && <ReportBanner month={recentReport.month} label={recentReport.monthLabel} />}
+
+      <PushOptIn />
+
       <WeeklyShareCard />
 
       <RecurringList rules={recurringRules ?? []} />
@@ -127,6 +151,13 @@ export default async function HomePage() {
         className="rounded-3xl border border-black/5 bg-white py-3 text-center text-sm font-semibold text-stone-500 shadow-sm"
       >
         Poori history dekhein →
+      </Link>
+
+      <Link
+        href="/reports"
+        className="rounded-3xl border border-black/5 bg-white py-3 text-center text-sm font-semibold text-stone-500 shadow-sm"
+      >
+        Sab &quot;Mahine ka Sach&quot; reports dekhein →
       </Link>
     </div>
   );
