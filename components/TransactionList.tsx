@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { getCategoryMeta } from "@/lib/categories";
 import { formatRs } from "@/lib/format";
 import { formatDateLabel, formatTimeLabel } from "@/lib/date";
+import Card from "./Card";
 import TransactionSheet from "./TransactionSheet";
 import type { Role, TransactionType } from "@/lib/supabase/database.types";
 
@@ -72,9 +74,7 @@ export default function TransactionList({
     <>
       <div className="flex flex-col gap-4">
         {transactions.length === 0 && (
-          <p className="rounded-3xl bg-white p-4 text-center text-sm text-stone-400">
-            Abhi tak koi entry nahi
-          </p>
+          <Card className="text-center text-sm text-stone-400">Abhi tak koi entry nahi</Card>
         )}
         {groups.map((group, index) => {
           const isToday = group.label === "Aaj";
@@ -92,7 +92,10 @@ export default function TransactionList({
                   className="mb-2 flex w-full items-center justify-between px-1 text-left"
                 >
                   <span className="flex items-center gap-1 text-xs font-semibold text-stone-400">
-                    <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>›</span>
+                    <ChevronRight
+                      className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                      strokeWidth={2.5}
+                    />
                     {group.label}
                   </span>
                   <span className={`text-xs font-bold ${net >= 0 ? "text-husband" : "text-red-600"}`}>
@@ -102,9 +105,10 @@ export default function TransactionList({
                 </button>
               )}
               {isOpen && (
-                <div className="rounded-3xl bg-white p-2">
+                <div className="rounded-3xl border border-black/5 bg-white p-2 shadow-sm">
                   {group.items.map((tx) => {
                     const meta = getCategoryMeta(tx.category);
+                    const Icon = meta.icon;
                     const person = profileById[tx.user_id];
                     const personColor = person?.role === "husband" ? "text-husband" : "text-wife";
                     const isIncome = tx.type === "income";
@@ -120,7 +124,9 @@ export default function TransactionList({
                           isMine ? "active:bg-stone-50" : ""
                         }`}
                       >
-                        <span className="text-2xl">{meta.emoji}</span>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600">
+                          <Icon className="h-5 w-5" strokeWidth={2} />
+                        </span>
                         <div className="flex-1">
                           <p className="text-sm font-semibold text-stone-800">{meta.label}</p>
                           <p className="text-xs text-stone-400">

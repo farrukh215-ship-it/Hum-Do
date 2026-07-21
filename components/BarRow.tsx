@@ -1,14 +1,15 @@
 import { formatRs } from "@/lib/format";
+import type { LucideIcon } from "lucide-react";
 
 export default function BarRow({
   label,
-  emoji,
+  icon: Icon,
   value,
   max,
   colorClass,
 }: {
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   value: number;
   max: number;
   colorClass: string;
@@ -18,8 +19,9 @@ export default function BarRow({
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
-        <span className="text-stone-600">
-          {emoji} {label}
+        <span className="flex items-center gap-1.5 text-stone-600">
+          <Icon className="h-4 w-4" strokeWidth={2} />
+          {label}
         </span>
         <span className="font-semibold text-stone-800">{formatRs(value)}</span>
       </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUp, ArrowDown, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import TransactionList, { type PersonMeta } from "@/components/TransactionList";
 import { getCategoryMeta } from "@/lib/categories";
@@ -97,18 +98,19 @@ export default async function HistoryPage({
       <div className="flex flex-wrap gap-2">
         {(
           [
-            ["all", "Sab"],
-            ["income", "⬆️ Aaya"],
-            ["expense", "⬇️ Gaya"],
-          ] as [Kind, string][]
-        ).map(([value, label]) => (
+            ["all", null, "Sab"],
+            ["income", ArrowUp, "Aaya"],
+            ["expense", ArrowDown, "Gaya"],
+          ] as const
+        ).map(([value, Icon, label]) => (
           <Link
             key={value}
             href={buildHref(who, value, q)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
               kind === value ? "bg-stone-800 text-white" : "bg-white text-stone-500"
             }`}
           >
+            {Icon && <Icon className="h-3.5 w-3.5" strokeWidth={2.5} />}
             {label}
           </Link>
         ))}
@@ -126,9 +128,10 @@ export default async function HistoryPage({
         />
         <button
           type="submit"
-          className="rounded-3xl bg-stone-800 px-4 py-2.5 text-sm font-semibold text-white transition active:scale-95"
+          aria-label="Dhoondein"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-800 text-white transition active:scale-95"
         >
-          🔍
+          <Search className="h-4 w-4" strokeWidth={2.5} />
         </button>
       </form>
 

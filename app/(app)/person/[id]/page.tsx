@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { ArrowUp, ArrowDown, PiggyBank, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMonthRange } from "@/lib/month";
 import { formatMonthLabel } from "@/lib/date";
 import { formatRs } from "@/lib/format";
 import { getCategoryMeta } from "@/lib/categories";
 import BarRow from "@/components/BarRow";
+import Card from "@/components/Card";
 import TransactionList, { type PersonMeta } from "@/components/TransactionList";
 
 export default async function PersonPage({
@@ -67,7 +69,7 @@ export default async function PersonPage({
 
   const sortedCategories = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1]);
   const maxCategory = sortedCategories[0]?.[1] ?? 0;
-  const emoji = profile.role === "husband" ? "👨" : "👩";
+  const roleColor = profile.role === "husband" ? "text-husband" : "text-wife";
 
   const profileById: Record<string, PersonMeta> = {
     [profile.id]: { name: profile.name, role: profile.role },
@@ -83,8 +85,9 @@ export default async function PersonPage({
         >
           ←
         </Link>
-        <h1 className="text-lg font-extrabold text-stone-800">
-          {emoji} {profile.name ?? "—"}
+        <h1 className="flex items-center gap-2 text-lg font-extrabold text-stone-800">
+          <User className={`h-5 w-5 ${roleColor}`} strokeWidth={2} />
+          {profile.name ?? "—"}
         </h1>
         <div className="h-9 w-9" />
       </div>
@@ -111,19 +114,22 @@ export default async function PersonPage({
         )}
       </div>
 
-      <div className="rounded-3xl bg-white p-4 text-sm text-stone-500">
-        <p>
-          ⬆️ Kamaya: <span className="font-semibold text-stone-800">{formatRs(income)}</span>
+      <Card className="flex flex-col gap-1 text-sm text-stone-500">
+        <p className="flex items-center gap-1.5">
+          <ArrowUp className="h-4 w-4 text-husband" strokeWidth={2} /> Kamaya:{" "}
+          <span className="font-semibold text-stone-800">{formatRs(income)}</span>
         </p>
-        <p>
-          ⬇️ Kharch kiya: <span className="font-semibold text-stone-800">{formatRs(expense)}</span>
+        <p className="flex items-center gap-1.5">
+          <ArrowDown className="h-4 w-4 text-red-600" strokeWidth={2} /> Kharch kiya:{" "}
+          <span className="font-semibold text-stone-800">{formatRs(expense)}</span>
         </p>
-        <p>
-          Bachat: <span className="font-semibold text-stone-800">{formatRs(income - expense)}</span>
+        <p className="flex items-center gap-1.5">
+          <PiggyBank className="h-4 w-4 text-stone-400" strokeWidth={2} /> Bachat:{" "}
+          <span className="font-semibold text-stone-800">{formatRs(income - expense)}</span>
         </p>
-      </div>
+      </Card>
 
-      <section className="rounded-3xl bg-white p-4">
+      <Card>
         <h2 className="text-sm font-semibold text-stone-500">Paisa kahan gaya?</h2>
         <div className="mt-3 flex flex-col gap-3">
           {sortedCategories.length === 0 && (
@@ -135,7 +141,7 @@ export default async function PersonPage({
               <BarRow
                 key={category}
                 label={meta.label}
-                emoji={meta.emoji}
+                icon={meta.icon}
                 value={total}
                 max={maxCategory}
                 colorClass="bg-stone-800"
@@ -143,7 +149,7 @@ export default async function PersonPage({
             );
           })}
         </div>
-      </section>
+      </Card>
 
       <TransactionList
         transactions={recentTx ?? []}

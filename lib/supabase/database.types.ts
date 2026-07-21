@@ -99,6 +99,45 @@ export interface Database {
         };
         Relationships: [];
       };
+      recurring_transactions: {
+        Row: {
+          id: string;
+          household_id: string;
+          user_id: string;
+          type: TransactionType;
+          amount: number;
+          category: string;
+          note: string | null;
+          day_of_month: number;
+          last_applied_month: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          household_id?: string;
+          user_id: string;
+          type: TransactionType;
+          amount: number;
+          category: string;
+          note?: string | null;
+          day_of_month: number;
+          last_applied_month?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          household_id?: string;
+          user_id?: string;
+          type?: TransactionType;
+          amount?: number;
+          category?: string;
+          note?: string | null;
+          day_of_month?: number;
+          last_applied_month?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {

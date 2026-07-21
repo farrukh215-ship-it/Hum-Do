@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Home, BarChart3, Plus } from "lucide-react";
 
 export default function BottomNav({ onAddClick }: { onAddClick: () => void }) {
   const pathname = usePathname();
@@ -15,7 +16,7 @@ export default function BottomNav({ onAddClick }: { onAddClick: () => void }) {
             pathname === "/" ? "text-stone-800" : "text-stone-400"
           }`}
         >
-          <span className="text-2xl">🏠</span>
+          <Home className="h-6 w-6" strokeWidth={2} />
           Ghar
         </Link>
 
@@ -23,9 +24,9 @@ export default function BottomNav({ onAddClick }: { onAddClick: () => void }) {
           type="button"
           onClick={onAddClick}
           aria-label="Add transaction"
-          className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-stone-800 text-3xl leading-none text-white shadow-lg transition active:scale-95"
+          className="-mt-8 flex h-14 w-14 items-center justify-center rounded-full bg-stone-800 text-white shadow-lg transition active:scale-95"
         >
-          +
+          <Plus className="h-7 w-7" strokeWidth={2.5} />
         </button>
 
         <Link
@@ -34,7 +35,7 @@ export default function BottomNav({ onAddClick }: { onAddClick: () => void }) {
             pathname === "/month" ? "text-stone-800" : "text-stone-400"
           }`}
         >
-          <span className="text-2xl">📊</span>
+          <BarChart3 className="h-6 w-6" strokeWidth={2} />
           Mahina
         </Link>
       </div>

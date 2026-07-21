@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMonthStartISO } from "@/lib/month";
 import { formatRs } from "@/lib/format";
 import PersonCard from "@/components/PersonCard";
 import TransactionList, { type PersonMeta } from "@/components/TransactionList";
+import RecurringList from "@/components/RecurringList";
+import WeeklyShareCard from "@/components/WeeklyShareCard";
 import type { Role } from "@/lib/supabase/database.types";
 
 export default async function HomePage() {
@@ -14,15 +17,17 @@ export default async function HomePage() {
 
   const monthStart = getMonthStartISO();
 
-  const [{ data: profiles }, { data: monthTx }, { data: recentTx }] = await Promise.all([
-    supabase.from("profiles").select("id, name, role, household_id"),
-    supabase.from("transactions").select("user_id, type, amount").gte("created_at", monthStart),
-    supabase
-      .from("transactions")
-      .select("id, user_id, type, amount, category, note, created_at")
-      .order("created_at", { ascending: false })
-      .limit(20),
-  ]);
+  const [{ data: profiles }, { data: monthTx }, { data: recentTx }, { data: recurringRules }] =
+    await Promise.all([
+      supabase.from("profiles").select("id, name, role, household_id"),
+      supabase.from("transactions").select("user_id, type, amount").gte("created_at", monthStart),
+      supabase
+        .from("transactions")
+        .select("id, user_id, type, amount, category, note, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase.from("recurring_transactions").select("id, type, amount, category, note"),
+    ]);
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
   const self = user ? profileById.get(user.id) : undefined;
@@ -70,11 +75,15 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col gap-5 pt-6">
       <div className="rounded-3xl bg-husband p-5 text-white">
-        <p className="text-sm opacity-90">Is mahine ki bachat</p>
-        <p className="mt-1 text-3xl font-extrabold">{formatRs(savings)}</p>
-        <div className="mt-3 flex justify-between text-sm opacity-90">
-          <span>⬆️ Aaya: {formatRs(totalIncome)}</span>
-          <span>⬇️ Gaya: {formatRs(totalExpense)}</span>
+        <p className="text-xs text-white/60">Is mahine ki bachat</p>
+        <p className="mt-1 text-5xl font-extrabold tracking-tight">{formatRs(savings)}</p>
+        <div className="mt-3 flex justify-between text-xs text-white/60">
+          <span className="flex items-center gap-1">
+            <ArrowUp className="h-3.5 w-3.5" strokeWidth={2.5} /> Aaya: {formatRs(totalIncome)}
+          </span>
+          <span className="flex items-center gap-1">
+            <ArrowDown className="h-3.5 w-3.5" strokeWidth={2.5} /> Gaya: {formatRs(totalExpense)}
+          </span>
         </div>
       </div>
 
@@ -97,11 +106,15 @@ export default async function HomePage() {
       </div>
 
       {!other && inviteCode && (
-        <div className="rounded-3xl bg-stone-100 p-4 text-center text-sm text-stone-600">
+        <div className="rounded-3xl border border-black/5 bg-stone-100 p-4 text-center text-sm text-stone-600 shadow-sm">
           Partner abhi shamil nahi hue. Ghar ka code bhejein:{" "}
           <span className="font-bold tracking-widest text-stone-800">{inviteCode}</span>
         </div>
       )}
+
+      <WeeklyShareCard />
+
+      <RecurringList rules={recurringRules ?? []} />
 
       <TransactionList
         transactions={recentTx ?? []}
@@ -111,7 +124,7 @@ export default async function HomePage() {
 
       <Link
         href="/history"
-        className="rounded-3xl bg-white py-3 text-center text-sm font-semibold text-stone-500"
+        className="rounded-3xl border border-black/5 bg-white py-3 text-center text-sm font-semibold text-stone-500 shadow-sm"
       >
         Poori history dekhein →
       </Link>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { User } from "lucide-react";
 import { formatRs } from "@/lib/format";
 import type { Role } from "@/lib/supabase/database.types";
 
@@ -19,15 +20,14 @@ export default function PersonCard({
 }) {
   const bg = role === "husband" ? "bg-husband/10" : "bg-wife/10";
   const text = role === "husband" ? "text-husband" : "text-wife";
-  const emoji = role === "husband" ? "👨" : "👩";
-  const classes = `block rounded-3xl p-4 transition ${muted ? "bg-stone-100" : bg} ${
-    href ? "active:scale-95" : ""
-  }`;
+  const classes = `block rounded-3xl border border-black/5 p-4 shadow-sm transition ${
+    muted ? "bg-stone-100" : bg
+  } ${href ? "active:scale-95" : ""}`;
 
   const content = (
     <>
       <div className="flex items-center gap-2">
-        <span className="text-2xl">{emoji}</span>
+        <User className={`h-5 w-5 ${muted ? "text-stone-400" : text}`} strokeWidth={2} />
         <span className={`text-sm font-bold ${muted ? "text-stone-400" : text}`}>{label}</span>
       </div>
       <div className="mt-3 space-y-1 text-xs text-stone-500">

@@ -1,11 +1,15 @@
 import Link from "next/link";
+import { PiggyBank, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMonthRange, getCustomDateRange } from "@/lib/month";
 import { formatMonthLabel, formatShortDate, dateInputValue, dateInputToISO } from "@/lib/date";
+import { formatRs } from "@/lib/format";
 import { getCategoryMeta } from "@/lib/categories";
 import BarRow from "@/components/BarRow";
 import BudgetsSection from "@/components/BudgetsSection";
 import MonthPicker from "@/components/MonthPicker";
+import Card from "@/components/Card";
+import Confetti from "@/components/Confetti";
 
 export default async function MonthPage({
   searchParams,
@@ -37,10 +41,10 @@ export default async function MonthPage({
       prevRange
         ? supabase
             .from("transactions")
-            .select("type, amount")
+            .select("type, amount, category")
             .gte("created_at", prevRange.startISO)
             .lt("created_at", prevRange.endISO)
-        : Promise.resolve({ data: [] as { type: string; amount: number }[] }),
+        : Promise.resolve({ data: [] as { type: string; amount: number; category: string }[] }),
     ]);
 
   const roleByUser = new Map((profiles ?? []).map((p) => [p.id, p.role]));
@@ -65,10 +69,17 @@ export default async function MonthPage({
   }
 
   let prevExpense = 0;
+  const prevCategoryTotals = new Map<string, number>();
   for (const tx of prevTx ?? []) {
-    if (tx.type !== "income") prevExpense += tx.amount;
+    if (tx.type !== "income") {
+      prevExpense += tx.amount;
+      prevCategoryTotals.set(tx.category, (prevCategoryTotals.get(tx.category) ?? 0) + tx.amount);
+    }
   }
+
+  const totalIncome = husbandIncome + wifeIncome;
   const totalExpense = husbandExpense + wifeExpense;
+  const savings = totalIncome - totalExpense;
   const expenseChangePct =
     prevRange && prevExpense > 0 ? Math.round(((totalExpense - prevExpense) / prevExpense) * 100) : null;
 
@@ -77,6 +88,34 @@ export default async function MonthPage({
   const maxIncome = Math.max(husbandIncome, wifeIncome, 1);
   const maxExpense = Math.max(husbandExpense, wifeExpense, 1);
   const expenseTotalsRecord = Object.fromEntries(categoryTotals);
+
+  const topCategory = sortedCategories[0];
+  let insight: string | null = null;
+  if (topCategory && totalExpense > 0) {
+    const [catValue, catTotal] = topCategory;
+    const catMeta = getCategoryMeta(catValue);
+    const pct = Math.round((catTotal / totalExpense) * 100);
+    let text = `${catMeta.label} pe ${pct}% kharcha hua`;
+    if (prevRange) {
+      const prevAmt = prevCategoryTotals.get(catValue) ?? 0;
+      const diff = catTotal - prevAmt;
+      if (diff !== 0) {
+        text += ` — pichle mahine se ${formatRs(Math.abs(diff))} ${diff > 0 ? "zyada" : "kam"}`;
+      }
+    }
+    insight = text;
+  }
+
+  const isCompletedMonth = !customRange && !range.isCurrentMonth;
+
+  const nearLimitCategories = (budgetsData ?? [])
+    .map((b) => {
+      const spent = expenseTotalsRecord[b.category] ?? 0;
+      const ratio = b.monthly_limit > 0 ? spent / b.monthly_limit : 0;
+      return { ...b, spent, ratio };
+    })
+    .filter((b) => b.ratio >= 0.9)
+    .sort((a, b) => b.ratio - a.ratio);
 
   const fromDefault = customRange ? (from as string) : dateInputValue(range.startISO);
   const toDefault = customRange ? (to as string) : dateInputValue(new Date().toISOString());
@@ -123,7 +162,37 @@ export default async function MonthPage({
 
       {!customRange && <MonthPicker currentParam={range.param} />}
 
-      <form action="/month" className="flex items-end gap-2 rounded-3xl bg-white p-4">
+      {insight && <p className="px-1 text-sm text-stone-500">{insight}</p>}
+
+      {isCompletedMonth && savings > 0 && (
+        <div className="relative overflow-hidden rounded-3xl border border-husband/20 bg-husband/5 p-4 text-center shadow-sm">
+          <Confetti />
+          <p className="text-sm font-semibold text-husband">🎉 Bachat Report</p>
+          <p className="mt-1 text-sm text-stone-600">
+            Is mahine <span className="font-bold text-stone-800">{formatRs(savings)}</span> bachat
+            hui — shabash!
+          </p>
+        </div>
+      )}
+
+      {nearLimitCategories.length > 0 && (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <p className="text-sm font-semibold text-amber-700">⚠️ Hadd ke qareeb</p>
+          <div className="mt-2 flex flex-col gap-1">
+            {nearLimitCategories.map((b) => {
+              const meta = getCategoryMeta(b.category);
+              const pct = Math.round(b.ratio * 100);
+              return (
+                <p key={b.category} className="text-xs text-amber-700">
+                  {meta.label} ki hadd {pct}% ho chuki hai
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <form action="/month" className="flex items-end gap-2 rounded-3xl border border-black/5 bg-white p-4 shadow-sm">
         <div className="flex-1">
           <label className="text-xs text-stone-400">Se</label>
           <input
@@ -152,15 +221,24 @@ export default async function MonthPage({
         </button>
       </form>
 
-      <section className="rounded-3xl bg-white p-4">
+      <Card>
         <h2 className="text-sm font-semibold text-stone-500">Kamai</h2>
-        <div className="mt-3 flex flex-col gap-3">
-          <BarRow label="Husband" emoji="👨" value={husbandIncome} max={maxIncome} colorClass="bg-husband" />
-          <BarRow label="Biwi" emoji="👩" value={wifeIncome} max={maxIncome} colorClass="bg-wife" />
-        </div>
-      </section>
+        {totalIncome === 0 ? (
+          <div className="mt-3 flex flex-col items-center gap-2 py-4 text-center">
+            <PiggyBank className="h-8 w-8 text-stone-300" strokeWidth={1.5} />
+            <p className="text-sm text-stone-400">
+              Abhi tak koi kamai nahi — neeche + button se pehli entry add karein
+            </p>
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            <BarRow label="Husband" icon={User} value={husbandIncome} max={maxIncome} colorClass="bg-husband" />
+            <BarRow label="Biwi" icon={User} value={wifeIncome} max={maxIncome} colorClass="bg-wife" />
+          </div>
+        )}
+      </Card>
 
-      <section className="rounded-3xl bg-white p-4">
+      <Card>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-stone-500">Kharcha</h2>
           {expenseChangePct !== null && (
@@ -172,12 +250,12 @@ export default async function MonthPage({
           )}
         </div>
         <div className="mt-3 flex flex-col gap-3">
-          <BarRow label="Husband" emoji="👨" value={husbandExpense} max={maxExpense} colorClass="bg-husband" />
-          <BarRow label="Biwi" emoji="👩" value={wifeExpense} max={maxExpense} colorClass="bg-wife" />
+          <BarRow label="Husband" icon={User} value={husbandExpense} max={maxExpense} colorClass="bg-husband" />
+          <BarRow label="Biwi" icon={User} value={wifeExpense} max={maxExpense} colorClass="bg-wife" />
         </div>
-      </section>
+      </Card>
 
-      <section className="rounded-3xl bg-white p-4">
+      <Card>
         <h2 className="text-sm font-semibold text-stone-500">Paisa kahan gaya?</h2>
         <div className="mt-3 flex flex-col gap-3">
           {sortedCategories.length === 0 && (
@@ -189,7 +267,7 @@ export default async function MonthPage({
               <BarRow
                 key={category}
                 label={meta.label}
-                emoji={meta.emoji}
+                icon={meta.icon}
                 value={total}
                 max={maxCategory}
                 colorClass="bg-stone-800"
@@ -197,7 +275,7 @@ export default async function MonthPage({
             );
           })}
         </div>
-      </section>
+      </Card>
 
       {!customRange && selfHouseholdId && (
         <BudgetsSection

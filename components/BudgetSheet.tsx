@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import Confetti from "./Confetti";
 import type { Category } from "@/lib/categories";
 
 export default function BudgetSheet({
@@ -21,11 +23,14 @@ export default function BudgetSheet({
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const Icon = category.icon;
 
   useEffect(() => {
     if (!open) return;
     setAmount(existingLimit ? String(existingLimit) : "");
+    setJustSaved(false);
     setError(null);
   }, [open, existingLimit]);
 
@@ -54,8 +59,12 @@ export default function BudgetSheet({
       return;
     }
 
-    onClose();
-    router.refresh();
+    if (navigator.vibrate) navigator.vibrate(15);
+    setJustSaved(true);
+    setTimeout(() => {
+      onClose();
+      router.refresh();
+    }, 650);
   }
 
   async function handleRemove() {
@@ -84,11 +93,22 @@ export default function BudgetSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
-      <div className="max-h-[85vh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-background p-5 pb-8">
+      <div className="relative max-h-[85vh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-background p-5 pb-8">
+        {justSaved && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-t-3xl bg-background">
+            <Confetti />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-husband text-white">
+              <Check className="h-9 w-9" strokeWidth={3} />
+            </div>
+            <p className="text-sm font-semibold text-stone-600">Limit save ho gayi</p>
+          </div>
+        )}
+
         <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-stone-300" />
 
-        <p className="text-center text-sm font-semibold text-stone-500">
-          {category.emoji} {category.label} ki mahine ki limit
+        <p className="flex items-center justify-center gap-1.5 text-center text-sm font-semibold text-stone-500">
+          <Icon className="h-4 w-4" strokeWidth={2} />
+          {category.label} ki mahine ki limit
         </p>
 
         <div className="mt-4 flex items-center rounded-3xl border border-stone-200 bg-white px-4 py-3">
