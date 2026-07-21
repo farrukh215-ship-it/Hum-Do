@@ -38,6 +38,14 @@ function groupByDate(transactions: TxRow[]): DateGroup[] {
   return groups;
 }
 
+function groupNet(items: TxRow[]): number {
+  let net = 0;
+  for (const tx of items) {
+    net += tx.type === "income" ? tx.amount : -tx.amount;
+  }
+  return net;
+}
+
 export default function TransactionList({
   transactions,
   profileById,
@@ -48,7 +56,17 @@ export default function TransactionList({
   currentUserId?: string;
 }) {
   const [editing, setEditing] = useState<TxRow | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const groups = groupByDate(transactions);
+
+  function toggle(index: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
 
   return (
     <>
@@ -58,48 +76,73 @@ export default function TransactionList({
             Abhi tak koi entry nahi
           </p>
         )}
-        {groups.map((group) => (
-          <div key={group.label}>
-            <p className="mb-2 px-1 text-xs font-semibold text-stone-400">{group.label}</p>
-            <div className="rounded-3xl bg-white p-2">
-              {group.items.map((tx) => {
-                const meta = getCategoryMeta(tx.category);
-                const person = profileById[tx.user_id];
-                const personColor = person?.role === "husband" ? "text-husband" : "text-wife";
-                const isIncome = tx.type === "income";
-                const isMine = tx.user_id === currentUserId;
+        {groups.map((group, index) => {
+          const isToday = group.label === "Aaj";
+          const isOpen = isToday || expanded.has(index);
+          const net = groupNet(group.items);
 
-                return (
-                  <button
-                    key={tx.id}
-                    type="button"
-                    disabled={!isMine}
-                    onClick={() => isMine && setEditing(tx)}
-                    className={`flex w-full items-center gap-3 border-b border-stone-100 px-3 py-3 text-left last:border-0 ${
-                      isMine ? "active:bg-stone-50" : ""
-                    }`}
-                  >
-                    <span className="text-2xl">{meta.emoji}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-stone-800">{meta.label}</p>
-                      <p className="text-xs text-stone-400">
-                        <span className={personColor}>{person?.name ?? "—"}</span>
-                        {tx.note ? ` · ${tx.note}` : ""}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${isIncome ? "text-husband" : "text-red-600"}`}>
-                        {isIncome ? "+" : "−"}
-                        {formatRs(tx.amount)}
-                      </p>
-                      <p className="text-[10px] text-stone-300">{formatTimeLabel(tx.created_at)}</p>
-                    </div>
-                  </button>
-                );
-              })}
+          return (
+            <div key={`${group.label}-${index}`}>
+              {isToday ? (
+                <p className="mb-2 px-1 text-xs font-semibold text-stone-400">{group.label}</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggle(index)}
+                  className="mb-2 flex w-full items-center justify-between px-1 text-left"
+                >
+                  <span className="flex items-center gap-1 text-xs font-semibold text-stone-400">
+                    <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>›</span>
+                    {group.label}
+                  </span>
+                  <span className={`text-xs font-bold ${net >= 0 ? "text-husband" : "text-red-600"}`}>
+                    {net >= 0 ? "+" : "−"}
+                    {formatRs(Math.abs(net))}
+                  </span>
+                </button>
+              )}
+              {isOpen && (
+                <div className="rounded-3xl bg-white p-2">
+                  {group.items.map((tx) => {
+                    const meta = getCategoryMeta(tx.category);
+                    const person = profileById[tx.user_id];
+                    const personColor = person?.role === "husband" ? "text-husband" : "text-wife";
+                    const isIncome = tx.type === "income";
+                    const isMine = tx.user_id === currentUserId;
+
+                    return (
+                      <button
+                        key={tx.id}
+                        type="button"
+                        disabled={!isMine}
+                        onClick={() => isMine && setEditing(tx)}
+                        className={`flex w-full items-center gap-3 border-b border-stone-100 px-3 py-3 text-left last:border-0 ${
+                          isMine ? "active:bg-stone-50" : ""
+                        }`}
+                      >
+                        <span className="text-2xl">{meta.emoji}</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-stone-800">{meta.label}</p>
+                          <p className="text-xs text-stone-400">
+                            <span className={personColor}>{person?.name ?? "—"}</span>
+                            {tx.note ? ` · ${tx.note}` : ""}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${isIncome ? "text-husband" : "text-red-600"}`}>
+                            {isIncome ? "+" : "−"}
+                            {formatRs(tx.amount)}
+                          </p>
+                          <p className="text-[10px] text-stone-300">{formatTimeLabel(tx.created_at)}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <TransactionSheet

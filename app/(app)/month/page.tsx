@@ -5,6 +5,7 @@ import { formatMonthLabel, formatShortDate, dateInputValue, dateInputToISO } fro
 import { getCategoryMeta } from "@/lib/categories";
 import BarRow from "@/components/BarRow";
 import BudgetsSection from "@/components/BudgetsSection";
+import MonthPicker from "@/components/MonthPicker";
 
 export default async function MonthPage({
   searchParams,
@@ -17,21 +18,30 @@ export default async function MonthPage({
 
   const startISO = customRange?.startISO ?? range.startISO;
   const endISO = customRange?.endISO ?? range.endISO;
+  const prevRange = customRange ? null : getMonthRange(range.prevParam);
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: profiles }, { data: monthTx }, { data: budgetsData }] = await Promise.all([
-    supabase.from("profiles").select("id, role, household_id"),
-    supabase
-      .from("transactions")
-      .select("user_id, type, amount, category")
-      .gte("created_at", startISO)
-      .lt("created_at", endISO),
-    supabase.from("budgets").select("category, monthly_limit"),
-  ]);
+  const [{ data: profiles }, { data: monthTx }, { data: budgetsData }, { data: prevTx }] =
+    await Promise.all([
+      supabase.from("profiles").select("id, role, household_id"),
+      supabase
+        .from("transactions")
+        .select("user_id, type, amount, category")
+        .gte("created_at", startISO)
+        .lt("created_at", endISO),
+      supabase.from("budgets").select("category, monthly_limit"),
+      prevRange
+        ? supabase
+            .from("transactions")
+            .select("type, amount")
+            .gte("created_at", prevRange.startISO)
+            .lt("created_at", prevRange.endISO)
+        : Promise.resolve({ data: [] as { type: string; amount: number }[] }),
+    ]);
 
   const roleByUser = new Map((profiles ?? []).map((p) => [p.id, p.role]));
   const selfHouseholdId = profiles?.find((p) => p.id === user?.id)?.household_id ?? null;
@@ -53,6 +63,14 @@ export default async function MonthPage({
       categoryTotals.set(tx.category, (categoryTotals.get(tx.category) ?? 0) + tx.amount);
     }
   }
+
+  let prevExpense = 0;
+  for (const tx of prevTx ?? []) {
+    if (tx.type !== "income") prevExpense += tx.amount;
+  }
+  const totalExpense = husbandExpense + wifeExpense;
+  const expenseChangePct =
+    prevRange && prevExpense > 0 ? Math.round(((totalExpense - prevExpense) / prevExpense) * 100) : null;
 
   const sortedCategories = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1]);
   const maxCategory = sortedCategories[0]?.[1] ?? 0;
@@ -103,6 +121,8 @@ export default async function MonthPage({
         </div>
       )}
 
+      {!customRange && <MonthPicker currentParam={range.param} />}
+
       <form action="/month" className="flex items-end gap-2 rounded-3xl bg-white p-4">
         <div className="flex-1">
           <label className="text-xs text-stone-400">Se</label>
@@ -141,7 +161,16 @@ export default async function MonthPage({
       </section>
 
       <section className="rounded-3xl bg-white p-4">
-        <h2 className="text-sm font-semibold text-stone-500">Kharcha</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-stone-500">Kharcha</h2>
+          {expenseChangePct !== null && (
+            <span
+              className={`text-xs font-bold ${expenseChangePct > 0 ? "text-red-600" : "text-husband"}`}
+            >
+              {expenseChangePct > 0 ? "▲" : "▼"} {Math.abs(expenseChangePct)}% pichle mahine se
+            </span>
+          )}
+        </div>
         <div className="mt-3 flex flex-col gap-3">
           <BarRow label="Husband" emoji="👨" value={husbandExpense} max={maxExpense} colorClass="bg-husband" />
           <BarRow label="Biwi" emoji="👩" value={wifeExpense} max={maxExpense} colorClass="bg-wife" />

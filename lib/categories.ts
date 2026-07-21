@@ -11,6 +11,9 @@ export const EXPENSE_CATEGORIES: Category[] = [
   { value: "safar", label: "Safar", emoji: "🚗" },
   { value: "sehat", label: "Sehat", emoji: "💊" },
   { value: "khana", label: "Khana", emoji: "🍔" },
+  { value: "shopping", label: "Shopping", emoji: "🛍️" },
+  { value: "taleem", label: "Taleem", emoji: "📚" },
+  { value: "tafreeh", label: "Tafreeh", emoji: "🎬" },
   { value: "baqi", label: "Baqi", emoji: "🎁" },
 ];
 
