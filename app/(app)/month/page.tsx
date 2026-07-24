@@ -103,16 +103,11 @@ export default async function MonthPage({
 
   const sortedCategories = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1]);
   const maxCategory = sortedCategories[0]?.[1] ?? 0;
-  const categoryBuckets: CategoryBucket[] = sortedCategories.map(([category, total]) => {
-    const meta = getCategoryMeta(category);
-    return {
-      category,
-      label: meta.label,
-      icon: meta.icon,
-      total,
-      entries: categoryEntries.get(category) ?? [],
-    };
-  });
+  const categoryBuckets: CategoryBucket[] = sortedCategories.map(([category, total]) => ({
+    category,
+    total,
+    entries: categoryEntries.get(category) ?? [],
+  }));
   const maxIncome = Math.max(husbandIncome, wifeIncome, 1);
   const maxExpense = Math.max(husbandExpense, wifeExpense, 1);
   const expenseTotalsRecord = Object.fromEntries(categoryTotals);

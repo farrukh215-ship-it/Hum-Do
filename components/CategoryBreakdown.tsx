@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { getCategoryMeta } from "@/lib/categories";
 import { formatRs } from "@/lib/format";
 import { formatDateLabel, formatTimeLabel } from "@/lib/date";
 import type { Role } from "@/lib/supabase/database.types";
@@ -17,8 +18,6 @@ export type CategoryEntry = {
 
 export type CategoryBucket = {
   category: string;
-  label: string;
-  icon: LucideIcon;
   total: number;
   entries: CategoryEntry[];
 };
@@ -44,7 +43,8 @@ export default function CategoryBreakdown({
   return (
     <div className="flex flex-col gap-3">
       {categories.map((bucket) => {
-        const Icon = bucket.icon;
+        const meta = getCategoryMeta(bucket.category);
+        const Icon = meta.icon;
         const pct = max > 0 ? Math.min(100, Math.round((bucket.total / max) * 100)) : 0;
         const isOpen = expanded.has(bucket.category);
 
@@ -62,7 +62,7 @@ export default function CategoryBreakdown({
                     strokeWidth={2.5}
                   />
                   <Icon className="h-4 w-4" strokeWidth={2} />
-                  {bucket.label}
+                  {meta.label}
                 </span>
                 <span className="font-semibold text-stone-800">{formatRs(bucket.total)}</span>
               </div>
