@@ -10,6 +10,7 @@ import BudgetsSection from "@/components/BudgetsSection";
 import MonthPicker from "@/components/MonthPicker";
 import Card from "@/components/Card";
 import Confetti from "@/components/Confetti";
+import CategoryBreakdown, { type CategoryBucket } from "@/components/CategoryBreakdown";
 
 export default async function MonthPage({
   searchParams,
@@ -31,10 +32,10 @@ export default async function MonthPage({
 
   const [{ data: profiles }, { data: monthTx }, { data: budgetsData }, { data: prevTx }] =
     await Promise.all([
-      supabase.from("profiles").select("id, role, household_id"),
+      supabase.from("profiles").select("id, name, role, household_id"),
       supabase
         .from("transactions")
-        .select("user_id, type, amount, category")
+        .select("id, user_id, type, amount, category, note, created_at")
         .gte("created_at", startISO)
         .lt("created_at", endISO),
       supabase.from("budgets").select("category, monthly_limit"),
@@ -48,6 +49,7 @@ export default async function MonthPage({
     ]);
 
   const roleByUser = new Map((profiles ?? []).map((p) => [p.id, p.role]));
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
   const selfHouseholdId = profiles?.find((p) => p.id === user?.id)?.household_id ?? null;
 
   let husbandIncome = 0;
@@ -55,6 +57,7 @@ export default async function MonthPage({
   let husbandExpense = 0;
   let wifeExpense = 0;
   const categoryTotals = new Map<string, number>();
+  const categoryEntries = new Map<string, CategoryBucket["entries"]>();
 
   for (const tx of monthTx ?? []) {
     const role = roleByUser.get(tx.user_id);
@@ -65,7 +68,22 @@ export default async function MonthPage({
       if (role === "husband") husbandExpense += tx.amount;
       else if (role === "wife") wifeExpense += tx.amount;
       categoryTotals.set(tx.category, (categoryTotals.get(tx.category) ?? 0) + tx.amount);
+
+      const entries = categoryEntries.get(tx.category) ?? [];
+      entries.push({
+        id: tx.id,
+        amount: tx.amount,
+        note: tx.note,
+        created_at: tx.created_at,
+        personName: profileById.get(tx.user_id)?.name ?? "—",
+        personRole: profileById.get(tx.user_id)?.role ?? null,
+      });
+      categoryEntries.set(tx.category, entries);
     }
+  }
+
+  for (const entries of categoryEntries.values()) {
+    entries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }
 
   let prevExpense = 0;
@@ -85,6 +103,16 @@ export default async function MonthPage({
 
   const sortedCategories = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1]);
   const maxCategory = sortedCategories[0]?.[1] ?? 0;
+  const categoryBuckets: CategoryBucket[] = sortedCategories.map(([category, total]) => {
+    const meta = getCategoryMeta(category);
+    return {
+      category,
+      label: meta.label,
+      icon: meta.icon,
+      total,
+      entries: categoryEntries.get(category) ?? [],
+    };
+  });
   const maxIncome = Math.max(husbandIncome, wifeIncome, 1);
   const maxExpense = Math.max(husbandExpense, wifeExpense, 1);
   const expenseTotalsRecord = Object.fromEntries(categoryTotals);
@@ -257,23 +285,12 @@ export default async function MonthPage({
 
       <Card>
         <h2 className="text-sm font-semibold text-stone-500">Paisa kahan gaya?</h2>
-        <div className="mt-3 flex flex-col gap-3">
-          {sortedCategories.length === 0 && (
+        <div className="mt-3">
+          {sortedCategories.length === 0 ? (
             <p className="text-sm text-stone-400">Is arse mein koi kharcha nahi hua</p>
+          ) : (
+            <CategoryBreakdown categories={categoryBuckets} max={maxCategory} />
           )}
-          {sortedCategories.map(([category, total]) => {
-            const meta = getCategoryMeta(category);
-            return (
-              <BarRow
-                key={category}
-                label={meta.label}
-                icon={meta.icon}
-                value={total}
-                max={maxCategory}
-                colorClass="bg-stone-800"
-              />
-            );
-          })}
         </div>
       </Card>
 
